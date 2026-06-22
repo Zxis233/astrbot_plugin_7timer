@@ -1,0 +1,99 @@
+{
+  "default_lon": {
+    "type": "float",
+    "description": "默认经度，/7timer 不带参数时使用。",
+    "default": 108.648
+  },
+  "default_lat": {
+    "type": "float",
+    "description": "默认纬度，/7timer 不带参数时使用。",
+    "default": 34.236
+  },
+  "lang": {
+    "type": "string",
+    "description": "7timer 图表语言。",
+    "default": "zh-CN"
+  },
+  "unit": {
+    "type": "string",
+    "description": "单位制。可填 metric 或 british。",
+    "default": "metric"
+  },
+  "ac": {
+    "type": "int",
+    "description": "7timer 大气透明度/海拔修正参数。常用值：0、2、7。",
+    "default": 0
+  },
+  "tzshift": {
+    "type": "int",
+    "description": "时区偏移显示参数。常用值：-1、0、1。",
+    "default": 0
+  },
+  "output": {
+    "type": "string",
+    "description": "可选的 7timer output 参数。留空时使用默认图片输出。",
+    "default": ""
+  },
+  "base_url": {
+    "type": "string",
+    "description": "7timer astro 图表接口地址。",
+    "default": "https://www.7timer.info/bin/astro.php"
+  },
+  "reply_with_link": {
+    "type": "bool",
+    "description": "回复图片时是否附带图表链接。",
+    "default": true
+  },
+  "proxy": {
+    "type": "object",
+    "description": "代理配置。启用后插件会通过代理下载 7timer 图表，再发送本地图片。",
+    "items": {
+      "enabled": {
+        "type": "bool",
+        "description": "是否启用代理下载。",
+        "default": false
+      },
+      "url": {
+        "type": "string",
+        "description": "HTTP/HTTPS 代理地址，例如 http://127.0.0.1:7890。",
+        "default": ""
+      },
+      "timeout_seconds": {
+        "type": "int",
+        "description": "代理请求超时时间，单位秒。",
+        "default": 30
+      }
+    }
+  },
+  "schedule": {
+    "type": "object",
+    "description": "定时推送配置。",
+    "items": {
+      "enabled": {
+        "type": "bool",
+        "description": "是否启用定时推送。",
+        "default": false
+      },
+      "interval_minutes": {
+        "type": "int",
+        "description": "定时推送间隔，单位分钟。",
+        "default": 720
+      },
+      "send_on_start": {
+        "type": "bool",
+        "description": "插件启动后是否先发送一次。",
+        "default": false
+      },
+      "start_delay_seconds": {
+        "type": "int",
+        "description": "启动后首次发送延迟秒数，仅 send_on_start 开启时生效。",
+        "default": 10
+      },
+      "targets": {
+        "type": "list",
+        "description": "定时推送目标会话。建议用 /7timer_bind 自动写入。",
+        "default": []
+      }
+    }
+  }
+}
