@@ -2,12 +2,12 @@
   "default_lon": {
     "type": "float",
     "description": "默认经度，/7timer 不带参数时使用。",
-    "default": 108.648
+    "default": 0.000
   },
   "default_lat": {
     "type": "float",
     "description": "默认纬度，/7timer 不带参数时使用。",
-    "default": 34.236
+    "default": 51.477
   },
   "lang": {
     "type": "string",
@@ -39,10 +39,31 @@
     "description": "7timer astro 图表接口地址。",
     "default": "https://www.7timer.info/bin/astro.php"
   },
+  "request_timeout_seconds": {
+    "type": "int",
+    "description": "直连请求 7timer 图表的超时时间，单位秒。",
+    "default": 30
+  },
   "reply_with_link": {
     "type": "bool",
     "description": "回复图片时是否附带图表链接。",
     "default": true
+  },
+  "failure": {
+    "type": "object",
+    "description": "请求失败时的回复配置。",
+    "items": {
+      "message": {
+        "type": "text",
+        "description": "请求 7timer 图表失败时返回的预设消息。",
+        "default": "获取 7timer 图表失败，请稍后再试。"
+      },
+      "include_error_details": {
+        "type": "bool",
+        "description": "是否在失败消息后附加错误详细信息。",
+        "default": false
+      }
+    }
   },
   "proxy": {
     "type": "object",

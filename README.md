@@ -44,7 +44,10 @@ https://www.7timer.info/bin/astro.php?lon=108.648&lat=34.236&lang=zh-CN&ac=0&uni
 - `ac`：7timer 的大气透明度/海拔修正参数，默认 `0`。
 - `tzshift`：时区显示偏移参数，默认 `0`。
 - `output`：可选的 7timer `output` 参数，留空时使用默认图片输出。
+- `request_timeout_seconds`：直连请求 7timer 图表的超时时间，默认 30 秒。
 - `reply_with_link`：是否在图片后附带图表 URL。
+- `failure.message`：请求 7timer 图表失败时返回的预设消息。
+- `failure.include_error_details`：是否在失败消息后附加错误详情，默认关闭。
 - `proxy.enabled`：是否启用代理下载。开启后插件会先通过代理请求 7timer 图表，再发送本地图片。
 - `proxy.url`：HTTP/HTTPS 代理地址，例如 `http://127.0.0.1:7890`。
 - `proxy.timeout_seconds`：代理请求超时时间，单位秒。
@@ -55,7 +58,11 @@ https://www.7timer.info/bin/astro.php?lon=108.648&lat=34.236&lang=zh-CN&ac=0&uni
 
 ## 代理
 
-默认情况下，插件会把 7timer 图片 URL 交给 AstrBot/平台适配器发送。启用 `proxy.enabled` 后，插件会自己通过 `proxy.url` 下载图表到临时文件，再把本地图片交给 AstrBot 发送，因此 7timer 请求会实际走代理。
+插件会先请求 7timer 图表并下载到临时文件，再把本地图片交给 AstrBot 发送。启用 `proxy.enabled` 后，这次 7timer 请求会通过 `proxy.url` 访问；关闭时使用直连请求。
+
+## 失败提示
+
+插件会在发送前请求 7timer 图表。请求失败时会返回 `failure.message` 中配置的预设消息。`failure.include_error_details` 默认关闭；开启后会在预设消息后追加异常详情，方便排查代理或网络问题。
 
 ## 定时推送
 

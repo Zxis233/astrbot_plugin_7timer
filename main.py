@@ -49,8 +49,8 @@ class SevenTimerPlugin(Star):
 
         try:
             yield await self._build_result(event, lon, lat)
-        except RuntimeError as e:
-            yield event.plain_result(f"获取 7timer 图表失败：{e}")
+        except Exception as e:
+            yield event.plain_result(self._failure_text(e))
 
     @filter.command("7timer_set", alias={"7timer_config"})
     async def seven_timer_set(self, event: AstrMessageEvent):
@@ -302,6 +302,7 @@ class SevenTimerPlugin(Star):
             image_type, image_ref = await self._resolve_image_ref(url)
         except Exception as e:
             logger.warning(f"7timer 定时推送失败：{e}")
+            await self._send_failure_to_targets(targets, e)
             return
 
         try:
@@ -321,9 +322,31 @@ class SevenTimerPlugin(Star):
                         logger.warning(f"7timer 定时推送未找到平台：{target}")
                 except Exception as e:
                     logger.warning(f"7timer 定时推送失败：{target}, {e}")
+                    await self._send_failure_to_target(target, e)
         finally:
             if image_type == "file":
                 self._remove_file_silent(image_ref)
+
+    async def _send_failure_to_targets(
+        self,
+        targets: list[str],
+        error: Exception | str | None = None,
+    ) -> None:
+        for target in targets:
+            await self._send_failure_to_target(target, error)
+
+    async def _send_failure_to_target(
+        self,
+        target: str,
+        error: Exception | str | None = None,
+    ) -> None:
+        try:
+            await self.context.send_message(
+                target,
+                MessageChain().message(self._failure_text(error)),
+            )
+        except Exception as e:
+            logger.warning(f"7timer 失败提示发送失败：{target}, {e}")
 
     def _restart_schedule_task(self):
         if self._schedule_task and not self._schedule_task.done():
@@ -388,23 +411,26 @@ class SevenTimerPlugin(Star):
         return base_url or DEFAULT_BASE_URL
 
     async def _resolve_image_ref(self, url: str) -> tuple[str, str]:
-        if not self._proxy_enabled():
-            return "url", url
         return "file", await asyncio.to_thread(self._download_chart, url)
 
     def _download_chart(self, url: str) -> str:
-        proxy_url = self._proxy_url()
-        if not proxy_url:
-            raise RuntimeError("已启用代理，但 proxy.url 为空。")
+        handlers = []
+        if self._proxy_enabled():
+            proxy_url = self._proxy_url()
+            if not proxy_url:
+                raise RuntimeError("已启用代理，但 proxy.url 为空。")
+            handlers.append(ProxyHandler({"http": proxy_url, "https": proxy_url}))
+        else:
+            handlers.append(ProxyHandler({}))
 
-        opener = build_opener(ProxyHandler({"http": proxy_url, "https": proxy_url}))
+        opener = build_opener(*handlers)
         request = Request(
             url,
             headers={"User-Agent": "astrbot-plugin-7timer/1.0"},
         )
         try:
             with opener.open(
-                request, timeout=self._proxy_timeout_seconds()
+                request, timeout=self._request_timeout_seconds()
             ) as response:
                 content_type = response.headers.get("Content-Type", "")
                 data = response.read()
@@ -412,7 +438,7 @@ class SevenTimerPlugin(Star):
             raise RuntimeError(str(e)) from e
 
         if not data:
-            raise RuntimeError("代理请求成功，但返回内容为空。")
+            raise RuntimeError("7timer 返回内容为空。")
 
         fd, path = tempfile.mkstemp(
             prefix="astrbot_7timer_",
@@ -421,6 +447,29 @@ class SevenTimerPlugin(Star):
         with os.fdopen(fd, "wb") as file:
             file.write(data)
         return path
+
+    def _request_timeout_seconds(self) -> int:
+        if self._proxy_enabled():
+            return self._proxy_timeout_seconds()
+        return max(1, self._int_value(self.config.get("request_timeout_seconds"), 30))
+
+    def _failure_text(self, error: Exception | str | None = None) -> str:
+        failure = self._failure_config()
+        message = str(
+            failure.get("message") or "获取 7timer 图表失败，请稍后再试。"
+        ).strip()
+        if not message:
+            message = "获取 7timer 图表失败，请稍后再试。"
+        if error and self._bool_value(failure.get("include_error_details"), False):
+            return f"{message}\n错误详情：{error}"
+        return message
+
+    def _failure_config(self) -> dict[str, Any]:
+        failure = self.config.get("failure")
+        if not isinstance(failure, dict):
+            failure = {}
+            self.config["failure"] = failure
+        return failure
 
     def _image_suffix(self, content_type: str) -> str:
         content_type = content_type.lower()
