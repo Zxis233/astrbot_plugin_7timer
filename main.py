@@ -2,6 +2,7 @@ import asyncio
 import os
 import re
 import tempfile
+from datetime import datetime, timedelta
 from typing import Any
 from urllib.parse import urlencode
 from urllib.request import ProxyHandler, Request, build_opener
@@ -273,11 +274,10 @@ class SevenTimerPlugin(Star):
             if not self._schedule_enabled() or not self._schedule_targets():
                 return
 
-            interval_seconds = self._schedule_interval_seconds()
-            if first_run and self._bool_value(schedule.get("send_on_start"), False):
-                delay = max(0, self._int_value(schedule.get("start_delay_seconds"), 0))
+            if first_run:
+                delay = self._initial_schedule_delay()
             else:
-                delay = interval_seconds
+                delay = self._schedule_interval_seconds()
 
             first_run = False
             await asyncio.sleep(delay)
@@ -377,6 +377,7 @@ class SevenTimerPlugin(Star):
             f"{prefix}\n"
             f"状态：{'开启' if enabled else '关闭'}\n"
             f"间隔：{interval_minutes} 分钟\n"
+            f"起始时间：{self._schedule_start_time() or '未设置'}\n"
             f"启动后立即发送：{'是' if self._bool_value(schedule.get('send_on_start'), False) else '否'}\n"
             f"目标会话数：{len(targets)}"
         )
@@ -405,6 +406,45 @@ class SevenTimerPlugin(Star):
     def _schedule_interval_seconds(self) -> int:
         raw = self._schedule_config().get("interval_minutes", 720)
         return max(1, self._int_value(raw, 720)) * 60
+
+    def _initial_schedule_delay(self) -> int:
+        start_time = self._schedule_start_time()
+        if start_time:
+            try:
+                return self._seconds_until_start_time(start_time)
+            except ValueError as e:
+                logger.warning(f"7timer 定时推送起始时间无效：{e}")
+
+        schedule = self._schedule_config()
+        if self._bool_value(schedule.get("send_on_start"), False):
+            return max(0, self._int_value(schedule.get("start_delay_seconds"), 0))
+        return self._schedule_interval_seconds()
+
+    def _schedule_start_time(self) -> str:
+        return str(self._schedule_config().get("start_time") or "").strip()
+
+    def _seconds_until_start_time(self, start_time: str) -> int:
+        parts = start_time.strip().split(":")
+        if len(parts) not in {2, 3}:
+            raise ValueError("请使用 HH:MM 或 HH:MM:SS 格式")
+        try:
+            hour = int(parts[0])
+            minute = int(parts[1])
+            second = int(parts[2]) if len(parts) == 3 else 0
+        except ValueError as e:
+            raise ValueError("起始时间必须是数字") from e
+        if not 0 <= hour <= 23:
+            raise ValueError("小时必须在 0 到 23 之间")
+        if not 0 <= minute <= 59:
+            raise ValueError("分钟必须在 0 到 59 之间")
+        if not 0 <= second <= 59:
+            raise ValueError("秒必须在 0 到 59 之间")
+
+        now = datetime.now()
+        target = now.replace(hour=hour, minute=minute, second=second, microsecond=0)
+        if target <= now:
+            target += timedelta(days=1)
+        return max(0, int((target - now).total_seconds()))
 
     def _base_url(self) -> str:
         base_url = str(self.config.get("base_url") or DEFAULT_BASE_URL).strip()

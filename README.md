@@ -53,6 +53,7 @@ https://www.7timer.info/bin/astro.php?lon=108.648&lat=34.236&lang=zh-CN&ac=0&uni
 - `proxy.timeout_seconds`：代理请求超时时间，单位秒。
 - `schedule.enabled`：是否启用定时推送。
 - `schedule.interval_minutes`：定时推送间隔，默认 720 分钟。
+- `schedule.start_time`：首次定时推送的起始时间，格式 `HH:MM` 或 `HH:MM:SS`，例如 `09:00`。
 - `schedule.send_on_start`：插件启动后是否先推送一次。
 - `schedule.targets`：定时推送目标会话，建议通过 `/7timer_bind` 自动写入。
 
@@ -70,5 +71,7 @@ https://www.7timer.info/bin/astro.php?lon=108.648&lat=34.236&lang=zh-CN&ac=0&uni
 
 1. 在要接收图表的会话中发送 `/7timer_bind`。
 2. 发送 `/7timer_schedule on` 开启定时推送。
+
+如果设置 `schedule.start_time=09:00` 且 `schedule.interval_minutes=720`，插件会等到下一次 09:00 先推送一次，然后每 12 小时推送一次。`schedule.start_time` 留空时，才会沿用启动后立即发送或从启动时间开始按间隔计算的旧逻辑。
 
 插件重载或停用时会自动取消后台定时任务。
